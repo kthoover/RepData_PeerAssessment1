@@ -7,11 +7,14 @@ The document answers four questions about the data and contains all R code neces
 
 The data is collected by the activity monitoring device at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and includes the number of steps taken in 5 minute intervals each day.
 
-Note:  All times are in 24:00 hr format
-     
+Note 1:  All times are in 24:00 hr format  
+Note 2:  There are 8 days with no data; these are shown in the first histogram in the 0-steps bin  
+
+<br>
+<br>
+<br>
+
 #### Question #1:  What is mean total number of steps taken per day?  What is median?
-
-
 
 ```{r fig.width=11, fig.height=6}
 par(mfrow = c(1, 1))
@@ -43,8 +46,12 @@ daily_median <- median(steps_per_day_n)
 ```
 
 
-The mean total number of steps taken per day is `r daily_mean`.  
-The median total number of steps taken per day is `r daily_median`.
+The mean total number of steps taken per day is `r sprintf("%.0f", daily_mean)`.  
+The median total number of steps taken per day is `r sprintf("%.0f", daily_median)`.
+
+<br>
+<br>
+<br>
 
 
 #### Question #2:  What is the average daily activity pattern?  Which 5-minute interval contains the maximum number of steps?
@@ -67,12 +74,11 @@ max_step_24 <- paste(paste(as.character(hour), ":", as.character(minute), sep ="
 ```
 The 5-minute interval which contains the maximum number of steps is `r max_step_24`.
 
-
+<br>
+<br>
+<br>
 
 #### Question #3:  Are there missing values?  Can they be imputed?  Does this change the mean and median?
-
-
-
 
 ```{r fig.width=11, fig.height=6}
 
@@ -94,7 +100,7 @@ colnames(full_interval_avg) <- c("interval", "steps")
 ```
 
 
-There are `r number_NAs` NA's in the original data set.  These could be replaced by zeros, but this shifts the distribution significantly to the left.  The missing data are in 8 days, each of which is completely missing.  There are many ways to impute the missing data, however, for this analysis missing data in an interval was simply replace with the average at that interval across all the days in which the interval was recorded.  Because entire days are missing, has the effect of shifting 8 days which previously has an average of zero to an "average" day.
+There are `r number_NAs` NA's in the original data set. The missing data are in 8 days, each of which is completely missing.  There are many ways to impute the missing data, however, for this analysis the interval average is used.  The interval average is simply the average of a specific time interval across all days where data is present.  Because entire days are missing, has the effect of shifting 8 days which previously has an average of zero to an "average" day.
 
 
 
@@ -114,11 +120,14 @@ full_daily_median <- median(full_steps_per_day_n)
 
 
 
-With imputed data, the mean total number of steps taken per day is `r full_daily_mean`.  
-With imputed data, the median total number of steps taken per day is `r full_daily_median`.
+With imputed data, the mean total number of steps taken per day is `r  sprintf("%.0f", full_daily_mean)`.  
+With imputed data, the median total number of steps taken per day is `r  sprintf("%.0f", full_daily_median)`.
 
+This method of imputing missing data leaves mean and median the same, but makes the missing days look like an average day.
 
-
+<br>
+<br>
+<br>
 
 #### Question #4:  Are there differences in activity patterns between weekdays and weekends?
 
@@ -144,7 +153,7 @@ xyplot(steps ~ interval | weekend, data = melted_we_v_wd_avg, layout = c(1, 2), 
 
 ```
 
-From the plot above it is clear there are difference between weekend and weekday activity.  
+From the plot above it is clear there are significant differences between weekend and weekday activity.  
 
 
 
