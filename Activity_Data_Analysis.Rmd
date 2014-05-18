@@ -1,0 +1,150 @@
+Activity Data Analysis
+========================================================
+
+This document is a brief analysis of data from a personal activity monitoring device for the Coursera class Reproducible Resarch taught by Roger Peng.
+
+The document answers four questions about the data and contains all R code necessary to complete the analysis.
+
+The data is collected by the activity monitoring device at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and includes the number of steps taken in 5 minute intervals each day.
+
+Note:  All times are in 24:00 hr format
+     
+#### Question #1:  What is mean total number of steps taken per day?  What is median?
+
+
+
+```{r fig.width=11, fig.height=6}
+par(mfrow = c(1, 1))
+#  Note:  will have to import lattice and reshape packages if not available
+library(lattice)
+library(reshape2)
+setInternet2(TRUE)
+
+# Load data file and unzip contents into dataframe called data
+temp <- tempfile()
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip",temp)
+data <- read.table(unz(temp, "activity.csv"), sep = ",", header =TRUE)
+unlink(temp)
+
+# Format the date and time as a single posix variable
+hour <- floor(data$interval / 100)
+minute <- data$interval - hour * 100
+t_d_char <- paste(as.character(data$date), paste(as.character(hour), ":", as.character(minute), sep =""))
+data$time_date <-strptime(t_d_char, format="%Y-%m-%d %H:%M")
+
+# Create histogram of steps per day
+steps_per_day <- tapply(data$steps,  data$date, FUN=sum, na.rm=TRUE)
+steps_per_day_n <-as.numeric(steps_per_day)
+hist(steps_per_day, breaks=100, main="Historgram of Total Steps per Day", xlab="Total Steps per Day")
+
+# Find daily mean and median
+daily_mean <- mean(steps_per_day_n)
+daily_median <- median(steps_per_day_n)
+```
+
+
+The mean total number of steps taken per day is `r daily_mean`.  
+The median total number of steps taken per day is `r daily_median`.
+
+
+#### Question #2:  What is the average daily activity pattern?  Which 5-minute interval contains the maximum number of steps?
+
+
+
+```{r fig.width=11, fig.height=6}
+
+# Generate a plot and find the step time when average is highest
+ia <- tapply(data$steps,  data$interval, FUN=mean, na.rm=TRUE)
+interval_avg <- data.frame(as.numeric(rownames(ia)), ia, row.names=NULL)
+colnames(interval_avg) <- c("interval", "steps")
+xscales = list(x = list(labels = sprintf("%.0f:00", floor(interval_avg$interval-5))))
+xyplot(steps ~ interval, data = interval_avg, type="l", ylab="Average Step per Interval", scales=xscales)
+max_step_time <- interval_avg[interval_avg[,2] == max(interval_avg[,2]),1]
+hour <- floor(max_step_time / 100)
+minute <- max_step_time - hour * 100
+max_step_24 <- paste(paste(as.character(hour), ":", as.character(minute), sep =""))
+
+```
+The 5-minute interval which contains the maximum number of steps is `r max_step_24`.
+
+
+
+#### Question #3:  Are there missing values?  Can they be imputed?  Does this change the mean and median?
+
+
+
+
+```{r fig.width=11, fig.height=6}
+
+# Replace missing values with average value at that time across all days and place it in full_data
+number_NAs = sum(is.na(data))
+full_data = data
+for (i in 1: length(full_data$steps)) {
+    if (is.na(full_data$steps[i])) {
+#      full_data$steps[i] <- 0
+      full_data$steps[i] <- subset(interval_avg, interval_avg[,1] == full_data$interval[i])[,2]  
+    }
+}
+fia <- tapply(full_data$steps,  full_data$interval, FUN=mean)
+full_interval_avg <- data.frame(as.numeric(rownames(fia)), fia, row.names=NULL)
+colnames(full_interval_avg) <- c("interval", "steps")
+
+
+
+```
+
+
+There are `r number_NAs` NA's in the original data set.  These could be replaced by zeros, but this shifts the distribution significantly to the left.  The missing data are in 8 days, each of which is completely missing.  There are many ways to impute the missing data, however, for this analysis missing data in an interval was simply replace with the average at that interval across all the days in which the interval was recorded.  Because entire days are missing, has the effect of shifting 8 days which previously has an average of zero to an "average" day.
+
+
+
+
+```{r fig.width=11, fig.height=6}
+
+# Create histogram of steps per day
+full_steps_per_day <- tapply(full_data$steps,  data$date, FUN=sum, na.rm=TRUE)
+full_steps_per_day_n <-as.numeric(steps_per_day)
+hist(full_steps_per_day, breaks=100, main="Historgram of Total Steps per Day", xlab="Total Steps per Day")
+
+# Find daily mean and median
+full_daily_mean <- mean(full_steps_per_day_n)
+full_daily_median <- median(full_steps_per_day_n)
+
+```
+
+
+
+With imputed data, the mean total number of steps taken per day is `r full_daily_mean`.  
+With imputed data, the median total number of steps taken per day is `r full_daily_median`.
+
+
+
+
+#### Question #4:  Are there differences in activity patterns between weekdays and weekends?
+
+
+```{r fig.width=11, fig.height=6}
+
+# Add a new column call weekend (weekday or weekend)
+full_data$weekend <- "weekday"
+for (i in 1: length(full_data$interval)) {
+    if (weekdays(full_data$time_date[i]) == "Saturday"  |  weekdays(full_data$time_date[i]) == "Sunday") {
+        full_data$weekend[i] <- "weekend"
+    }  
+}
+
+# Create an average and place it in a dataframe
+wvw <- tapply(full_data$steps,  list(full_data$interval, full_data$weekend), FUN=mean)
+we_v_wd_avg <- data.frame(as.numeric(rownames(wvw)), wvw[,1], wvw[,2], row.names=NULL)
+colnames(we_v_wd_avg) <- c("interval", "weekday", 'weekend')
+
+# Use the melt function to transform the wide data into long form for factor plotting
+melted_we_v_wd_avg <- melt(we_v_wd_avg, id.vars ="interval", variable.name="weekend", value.name="steps")
+xyplot(steps ~ interval | weekend, data = melted_we_v_wd_avg, layout = c(1, 2), type="l", ylab="Average Step per Interval", scales=xscales)
+
+```
+
+From the plot above it is clear there are difference between weekend and weekday activity.  
+
+
+
